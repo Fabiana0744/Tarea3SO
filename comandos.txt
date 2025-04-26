@@ -1,0 +1,21 @@
+Compilar servidor:
+gcc prethread-WebServer.c -o prethread-WebServer -lpthread
+
+Ejecutar servidor:
+./prethread-WebServer -n 4 -w /home/fabi/Escritorio/www -p 8080
+
+
+Probar servidor sin cliente existente (en terminal):
+GET:    curl http://localhost:8080/index.html
+        curl http://localhost:8080/imagen.jpg --output imagen.jpg
+
+HEAD:   curl -I http://localhost:8080/index.html
+POST:   curl -X POST -d "mensaje=HolaServidor" http://localhost:8080/test
+PUT:    curl -X PUT -d "Hola mundo PUT" http://localhost:8080/archivo_put.txt
+DELETE: curl -X DELETE http://localhost:8080/archivo_put.txt
+
+
+Varias conexiones en paralelo:
+for i in {1..5}; do curl http://localhost:8080/index.html & done
+wait
+
