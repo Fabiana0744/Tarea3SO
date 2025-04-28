@@ -2,7 +2,7 @@ Compilar servidor:
 gcc prethread-WebServer.c -o prethread-WebServer -lpthread
 
 Ejecutar servidor:
-./prethread-WebServer -n 4 -w /home/fabi/Escritorio/www -p 8080
+./prethread-WebServer -n 4 -w /home/ian/Downloads/www -p 8080
 
 
 Probar servidor sin cliente existente (en terminal):
@@ -21,4 +21,33 @@ wait
 
 
 
+gcc HTTPclient.c -o HTTPclient -lcurl
 
+
+Probar servidor con HTTPclient:
+GET:
+    ./HTTPclient -h localhost:8080 GET /index.html
+    ./HTTPclient -h localhost:8080 GET /archivo.pdf
+    ./HTTPclient -h localhost:8080 GET /imagen.jpg
+
+HEAD:
+    ./HTTPclient -h localhost:8080 HEAD /index.html
+    ./HTTPclient -h localhost:8080 HEAD /imagen.jpg
+    ./HTTPclient -h localhost:8080 HEAD /archivo.pdf
+
+PUT:
+    ./HTTPclient -h localhost:8080 PUT /archivo2.txt -d "nuevo contenido"
+    ./HTTPclient -h localhost:8080 PUT /imagen2.jpg -f imagen2.jpg
+    ./HTTPclient -h localhost:8080 PUT /subido.pdf -f archivo.pdf
+
+
+POST:
+    ./HTTPclient -h localhost:8080 POST /nuevo.txt -d "contenido de prueba"
+
+DELETE:
+    ./HTTPclient -h localhost:8080 DELETE /archivo2.txt
+
+
+
+Descargar binario:
+./HTTPclient -h localhost:8080 GET /archivo.txt -o descargado.txt
