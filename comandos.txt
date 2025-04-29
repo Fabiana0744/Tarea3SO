@@ -2,6 +2,7 @@ Compilar servidor:
 gcc prethread-WebServer.c -o prethread-WebServer -lpthread
 
 Ejecutar servidor:
+./prethread-WebServer -n 4 -w /home/fabi/Escritorio/www -p 8080
 ./prethread-WebServer -n 4 -w /home/ian/Downloads/www -p 8080
 
 
@@ -51,3 +52,8 @@ DELETE:
 
 Descargar binario:
 ./HTTPclient -h localhost:8080 GET /archivo.txt -o descargado.txt
+
+
+Probar STRESS:
+chmod +x stress.py
+./stress.py -n 20 ./HTTPclient -h localhost:8080 GET /archivo_grande.txt
