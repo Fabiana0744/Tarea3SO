@@ -5,6 +5,14 @@ import subprocess
 import threading
 import sys
 
+
+# /*
+#  * Procesa los argumentos de línea de comandos.
+#  * Entrada:
+#  *   - sys.argv: Argumentos pasados al script.
+#  * Salida:
+#  *   - Retorna una tupla (n, comando), donde n es el número de hilos y comando es una lista con el comando a ejecutar.
+#  */
 def procesar_argumentos():
     if "-n" not in sys.argv:
         print("Error: Debes especificar el número de hilos con el argumento -n.")
@@ -24,6 +32,15 @@ def procesar_argumentos():
 
     return n, comando
 
+# /*
+#  * Ejecuta un comando HTTP y registra el resultado.
+#  * Entrada:
+#  *   - orden: Lista de strings que representa el comando a ejecutar.
+#  *   - registros: Lista compartida donde se almacenan los resultados por hilo.
+#  *   - numero: Índice del hilo actual.
+#  * Salida:
+#  *   - Actualiza la posición correspondiente del hilo en la lista registros con "OK", "503" o "ERROR".
+#  */
 def ejecutar_cliente_http(orden, registros, numero):
     try:
         resultado = subprocess.run(
@@ -41,6 +58,15 @@ def ejecutar_cliente_http(orden, registros, numero):
     except Exception:
         registros[numero] = "ERROR"
 
+
+# /*
+#  * Lanza múltiples hilos para ejecutar una prueba de estrés.
+#  * Entrada:
+#  *   - cantidad: Número de hilos a crear.
+#  *   - orden: Lista con el comando a ejecutar en cada hilo.
+#  * Salida:
+#  *   - Retorna una lista con los resultados de cada hilo (OK, 503 o ERROR).
+#  */
 def lanzar_simulacion(cantidad, orden):
     registros_resultados = [None] * cantidad
     lista_hilos = []
@@ -57,6 +83,15 @@ def lanzar_simulacion(cantidad, orden):
 
     return registros_resultados
 
+
+
+# /*
+#  * Muestra un resumen de los resultados de la prueba de estrés.
+#  * Entrada:
+#  *   - registros: Lista con los resultados de cada hilo.
+#  * Salida:
+#  *   - Imprime en pantalla el número de solicitudes exitosas, rechazadas y fallidas.
+#  */
 def mostrar_resumen(registros):
     exitosos = registros.count("OK")
     rechazados = registros.count("503")

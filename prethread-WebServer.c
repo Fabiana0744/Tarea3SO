@@ -9,23 +9,24 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-#define PUERTO_POR_DEFECTO 8080
-#define TAM_BUFFER 4096
+#define PUERTO_POR_DEFECTO 8080 // Puerto por defecto para el servidor HTTP
+#define TAM_BUFFER 4096         // Tamaño del buffer de lectura/escritura
 
 int descriptor_servidor;
 int puerto = PUERTO_POR_DEFECTO;
-char *directorio_raiz = ".";
+char *directorio_raiz = ".";    // Directorio raíz para servir archivos
 int cantidad_hilos = 4;
 int clientes_activos = 0;
-pthread_mutex_t mutex_clientes = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_clientes = PTHREAD_MUTEX_INITIALIZER;     // Mutex para sincronizar acceso a 'clientes_activos'
 
-
+// Estructura para definir protocolos conocidos
 struct Protocolo {
     int puerto1;
     int puerto2;
     const char *nombre;
 };
 
+// Lista de protocolos conocidos
 struct Protocolo protocolos[] = {
     {21, 2121, "FTP"},
     {22, 2222, "SSH"},
@@ -35,6 +36,11 @@ struct Protocolo protocolos[] = {
     {161, 16161, "SNMP"},
 };
 
+/*
+ * Determina el tipo MIME de un archivo basado en su extensión.
+ * Entrada: Nombre del archivo para extraer su extensión.
+ * Salida: Retorna el tipo de contenido MIME correspondiente o "application/octet-stream" si es desconocido.
+ */
 const char* obtener_tipo_contenido(const char *nombre_archivo) {
     static const struct { const char *ext, *tipo; } tabla[] = {
         { "html", "text/html" }, { "htm",  "text/html" },
@@ -76,6 +82,12 @@ const char* obtener_tipo_contenido(const char *nombre_archivo) {
     return "application/octet-stream";
 }
 
+
+/*
+ * Detecta el protocolo asociado a un número de puerto.
+ * Entrada: Número de puerto a verificar.
+ * Salida: Retorna el nombre del protocolo conocido o "Desconocido" si no está en la lista.
+ */
 const char* detectar_protocolo(int puerto) {
     for (int i = 0; i < sizeof(protocolos) / sizeof(protocolos[0]); i++) {
         if (puerto == protocolos[i].puerto1 || puerto == protocolos[i].puerto2) {
@@ -85,6 +97,15 @@ const char* detectar_protocolo(int puerto) {
     return "Desconocido";
 }
 
+
+/*
+ * Envía una respuesta HTTP de error al cliente.
+ * Entrada:
+ *   - cliente_fd: Descriptor del socket del cliente.
+ *   - codigo: Código de estado HTTP.
+ *   - texto: Mensaje de error.
+ *   - tipo_contenido: Tipo MIME del contenido de respuesta.
+ */
 void enviar_error(int cliente_fd, int codigo, const char *texto, const char *tipo_contenido) {
     char respuesta[512];
     int len = snprintf(respuesta, sizeof(respuesta),
@@ -94,6 +115,15 @@ void enviar_error(int cliente_fd, int codigo, const char *texto, const char *tip
     printf("HTTP/1.1 %d %s\n", codigo, texto);
 }
 
+
+/*
+ * Envía un archivo al cliente en respuesta a una solicitud HTTP GET o HEAD.
+ * Entrada:
+ *   - cliente_fd: Descriptor del socket del cliente.
+ *   - tipo_contenido: Tipo MIME del archivo.
+ *   - archivo_fd: Descriptor del archivo a enviar.
+ *   - metodo: Método HTTP (GET o HEAD).
+ */
 void enviar_archivo(int cliente_fd, const char *tipo_contenido, int archivo_fd, const char *metodo) {
     char cabecera[256];
     int len = snprintf(cabecera, sizeof(cabecera),
@@ -110,6 +140,14 @@ void enviar_archivo(int cliente_fd, const char *tipo_contenido, int archivo_fd, 
     close(archivo_fd);
 }
 
+/*
+ * Recibe datos del cliente (por ejemplo en un PUT) y los guarda en un archivo.
+ * Entrada:
+ *   - cliente_fd: Descriptor del socket del cliente.
+ *   - archivo_fd: Descriptor del archivo donde guardar los datos.
+ *   - cabecera_http: Cabecera HTTP recibida inicialmente.
+ *   - tamanio_cabecera: Tamaño de la cabecera HTTP.
+ */
 void recibir_y_guardar_datos(int cliente_fd, int archivo_fd, const char *cabecera_http, int tamanio_cabecera) {
     int contenido_total = 0;
     const char *pos_content_length = strcasestr(cabecera_http, "Content-Length:");
@@ -142,6 +180,13 @@ void recibir_y_guardar_datos(int cliente_fd, int archivo_fd, const char *cabecer
     }
 }
 
+/*
+ * Procesa una solicitud HTTP de un cliente.
+ * Entrada:
+ *   - cliente_fd: Descriptor del socket del cliente.
+ * Salida:
+ *   - Envía la respuesta HTTP correspondiente (archivo, error, creación, etc.).
+ */
 void procesar_cliente(int cliente_fd) {
     char buffer[TAM_BUFFER] = {0};
     read(cliente_fd, buffer, TAM_BUFFER);
@@ -203,6 +248,14 @@ void procesar_cliente(int cliente_fd) {
     }
 }
 
+
+/*
+ * Función que atiende continuamente clientes aceptados en un hilo.
+ * Entrada:
+ *   - arg: No utilizado, puede ser NULL.
+ * Salida:
+ *   - NULL al terminar (aunque no debería terminar).
+ */
 void *atender_cliente(void *arg) {
     struct sockaddr_in dir_cli;
     socklen_t lon = sizeof(dir_cli);
@@ -231,7 +284,14 @@ void *atender_cliente(void *arg) {
 }
 
 
-
+/*
+ * Procesa los argumentos de la línea de comandos.
+ * Entrada:
+ *   - argc: Cantidad de argumentos.
+ *   - argv: Lista de argumentos.
+ * Salida:
+ *   - Configura el servidor según los argumentos recibidos.
+ */
 void procesar_argumentos(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0 && i + 1 < argc) {

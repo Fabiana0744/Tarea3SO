@@ -6,13 +6,19 @@
 // Variables globales
 char *ruta_archivo = NULL;
 
-// Estructura para manejar la respuesta
+// Estructura para almacenar datos de respuesta HTTP en memoria.
 struct Memoria {
     char *respuesta;
     size_t tamano;
 };
 
-// Función para determinar el tipo de contenido basado en la extensión
+/*
+ * Obtiene el tipo de contenido (Content-Type) basado en la extensión de un archivo.
+ * Entrada:
+ *   - nombre_archivo: Nombre o ruta del archivo del cual extraer la extensión.
+ * Salida:
+ *   - Retorna un string con el tipo de contenido asociado o "application/octet-stream" si no se encuentra.
+ */
 const char* obtener_tipo_contenido(const char *nombre_archivo) {
     static const struct { const char *ext, *tipo; } tabla[] = {
         { "html", "text/html" }, { "htm",  "text/html" },
@@ -54,18 +60,27 @@ const char* obtener_tipo_contenido(const char *nombre_archivo) {
         }
     }
 
-    return "application/octet-stream";
+    return "application/octet-stream";      // Tipo genérico si no se reconoce la extensión
 }
 
 
-// Función para escribir datos en memoria
+/*
+ * Función de escritura que almacena la respuesta del servidor en memoria.
+ * Entrada:
+ *   - contenido: Puntero a los datos recibidos.
+ *   - tamano_elemento: Tamaño de cada unidad de contenido.
+ *   - cantidad_elementos: Número de unidades de contenido.
+ *   - memoria_usuario: Puntero a la estructura de memoria del usuario.
+ * Salida:
+ *   - Retorna el número de bytes escritos.
+ */
 size_t escribir_respuesta(void *contenido, size_t tamano_elemento, size_t cantidad_elementos, void *memoria_usuario) {
     size_t total_bytes = tamano_elemento * cantidad_elementos;
     struct Memoria *memoria = (struct Memoria *)memoria_usuario;
 
     if (!contenido || total_bytes == 0) return 0;
 
-    char *nueva_respuesta = realloc(memoria->respuesta, memoria->tamano + total_bytes + 1);
+    char *nueva_respuesta = realloc(memoria->respuesta, memoria->tamano + total_bytes + 1);     // Redimensionar la memoria para agregar los nuevos datos
     if (nueva_respuesta == NULL) {
         fprintf(stderr, "Error de memoria al expandir la respuesta.\n");
         return 0;
@@ -80,7 +95,18 @@ size_t escribir_respuesta(void *contenido, size_t tamano_elemento, size_t cantid
 }
 
 
-// Función para configurar la solicitud HTTP
+/*
+ * Configura los parámetros de una solicitud HTTP según el método especificado.
+ * Entrada:
+ *   - curl: Puntero al manejador CURL inicializado.
+ *   - metodo: Método HTTP ("GET", "POST", "PUT", "DELETE", "HEAD").
+ *   - datos: Datos a enviar en la solicitud (pueden ser NULL).
+ *   - url: URL destino de la solicitud.
+ *   - fp: Puntero a archivo usado para cargas PUT.
+ *   - tamano_archivo: Puntero al tamaño del archivo en caso de PUT.
+ * Salida:
+ *   - No retorna valor. Configura directamente el objeto CURL.
+ */
 void configurar_solicitud(CURL *curl, const char *metodo, const char *datos, const char *url, FILE **fp, long *tamano_archivo) {
     if (strcasecmp(metodo, "GET") == 0) {
         return;
@@ -118,7 +144,7 @@ void configurar_solicitud(CURL *curl, const char *metodo, const char *datos, con
                 exit(EXIT_FAILURE);
             }
 
-            fseek(*fp, 0, SEEK_END);
+            fseek(*fp, 0, SEEK_END);    // Ir al final del archivo para obtener su tamaño
             *tamano_archivo = ftell(*fp);
             rewind(*fp);
 
@@ -145,9 +171,19 @@ void configurar_solicitud(CURL *curl, const char *metodo, const char *datos, con
 }
 
 
+/*
+ * Procesa la respuesta de la solicitud HTTP y maneja su salida.
+ * Entrada:
+ *   - curl: Puntero al manejador CURL.
+ *   - chunk: Puntero a la estructura de memoria que contiene la respuesta.
+ *   - archivo_salida: Nombre del archivo donde guardar la respuesta (opcional).
+ *   - metodo: Método HTTP utilizado.
+ * Salida:
+ *   - No retorna valor. Imprime información o guarda archivo según corresponda.
+ */
 void procesar_respuesta(CURL *curl, struct Memoria *chunk, const char *archivo_salida, const char *metodo) {
     long codigo_http = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &codigo_http);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &codigo_http);      // Obtener el código HTTP
     printf("Código de respuesta HTTP: %ld\n", codigo_http);
 
     if (!chunk->respuesta || chunk->tamano == 0) {
@@ -174,7 +210,19 @@ void procesar_respuesta(CURL *curl, struct Memoria *chunk, const char *archivo_s
     }
 }
 
-
+/*
+ * Procesa los argumentos de la línea de comandos para configurar la solicitud.
+ * Entrada:
+ *   - argc: Número de argumentos.
+ *   - argv: Array de argumentos.
+ *   - host: Puntero para almacenar el host.
+ *   - metodo: Puntero para almacenar el método HTTP.
+ *   - ruta: Puntero para almacenar la ruta del recurso.
+ *   - datos: Puntero para almacenar datos opcionales de envío.
+ *   - archivo_salida: Puntero para almacenar el nombre del archivo de salida.
+ * Salida:
+ *   - No retorna valor. Llena las variables proporcionadas.
+ */
 void procesar_argumentos(int argc, char *argv[], char **host, char **metodo, char **ruta, char **datos, char **archivo_salida) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-h") == 0 && i + 1 < argc) {
@@ -252,7 +300,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Procesar respuesta
     procesar_respuesta(curl, &chunk, archivo_salida, metodo);
 
     free(chunk.respuesta);
